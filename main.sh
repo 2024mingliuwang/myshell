@@ -15,6 +15,22 @@ blue(){
     echo -e "\033[34m\033[01m$1\033[0m"
 }
 
+# 检查是否已优化
+check_optimization() {
+    # 检查系统优化标记文件
+    if [ ! -f "/root/.system_optimized" ]; then
+        yellow "系统未优化，开始执行优化..."
+        sysctl_check
+        check_system
+        sysctl_Optimization
+        # 创建标记文件
+        touch /root/.system_optimized
+        green "系统优化完成！"
+    else
+        green "系统已优化，跳过优化步骤..."
+    fi
+}
+
 # 检查相应组件是否安装
 check_system(){
     if [ ! -f "/usr/bin/sudo" ]; then
@@ -102,7 +118,7 @@ root_add(){
 #添加ip转发脚本
 udp_ip(){
     if [ ! -f "/root/udp.sh" ]; then
-        yello "未发现配置脚本，正在下载脚本....."
+        yellow "未发现配置脚本，正在下载脚本....."
         wget -O "/root/udp.sh" "https://raw.githubusercontent.com/2024mingliuwang/myshell/refs/heads/main/Auxiliary/udp.sh"
         chmod +x /root/udp.sh
         green "执行脚本....."
@@ -123,6 +139,7 @@ install_warp() {
 
 # 主菜单
 main_menu() {
+    clear
     green "====================================="
     green " 欢迎使用one的一键脚本"
     green " 介绍：一键优化系统脚本"
@@ -132,25 +149,40 @@ main_menu() {
     green " 1.设置root密码"
     green " 2.增加虚拟内存"
     green " 3.添加warp"
-    green " 4.ip转发"
+    green " 4.IP转发"
+    green " 5.执行系统优化"
     green " 0.退出脚本"
     read -r -p "请输入数字:" num
     case "$num" in
         1)
             root_add
+            read -n1 -p "按任意键继续..."
+            main_menu
             ;;
         2)
             swap_add
+            read -n1 -p "按任意键继续..."
+            main_menu
             ;;
         3)  
             install_warp
+            read -n1 -p "按任意键继续..."
+            main_menu
             ;;
         4)
-            udp.sh
+            udp_ip
+            read -n1 -p "按任意键继续..."
+            main_menu
             ;;
-
+        5)
+            rm -f /root/.system_optimized
+            check_optimization
+            read -n1 -p "按任意键继续..."
+            main_menu
+            ;;
         0)
-            exit 1
+            clear
+            exit 0
             ;;
         *)
             clear
@@ -162,7 +194,5 @@ main_menu() {
 }
 
 # 脚本开始
-sysctl_check
-check_system
-sysctl_Optimization
+check_optimization
 main_menu
