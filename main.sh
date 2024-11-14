@@ -99,6 +99,17 @@ root_add(){
     bash "/root/ssh_root"
 }
 
+#添加ip转发脚本
+udp_ip(){
+    if [ ! -f "/root/udp.sh" ]; then
+        yello "未发现配置脚本，正在下载脚本....."
+        wget -O "/root/udp.sh" "https://raw.githubusercontent.com/2024mingliuwang/myshell/refs/heads/main/Auxiliary/udp.sh"
+        chmod +x /root/udp.sh
+        green "执行脚本....."
+    fi
+    bash /root/udp.sh
+}
+
 # 添加warp脚本
 install_warp() {
     green "开始安装warp"
@@ -121,6 +132,7 @@ main_menu() {
     green " 1.设置root密码"
     green " 2.增加虚拟内存"
     green " 3.添加warp"
+    green " 4.ip转发"
     green " 0.退出脚本"
     read -r -p "请输入数字:" num
     case "$num" in
@@ -133,6 +145,10 @@ main_menu() {
         3)  
             install_warp
             ;;
+        4)
+            udp.sh
+            ;;
+
         0)
             exit 1
             ;;
