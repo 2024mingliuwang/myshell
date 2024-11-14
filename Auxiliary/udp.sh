@@ -76,6 +76,31 @@ configure_ipv4_to_ipv4() {
     create_rules_script "v4-v4" "$src_ip" "$dst_ip"
 }
 
+# 配置IPv6到IPv6的转发
+configure_ipv6_to_ipv6() {
+    local src_ip=$1
+    local dst_ip=$2
+    
+    echo -e "${YELLOW}配置IPv6到IPv6的转发...${NC}"
+    
+    # 启用IPv6 NAT
+    modprobe nf_nat_ipv6
+    
+    # 配置NAT规则
+    ip6tables -t nat -C PREROUTING -p udp --dst "$src_ip" -j DNAT --to-destination "$dst_ip" 2>/dev/null || \
+    ip6tables -t nat -A PREROUTING -p udp --dst "$src_ip" -j DNAT --to-destination "$dst_ip"
+    
+    ip6tables -t nat -C POSTROUTING -s "$dst_ip" -j SNAT --to-source "$src_ip" 2>/dev/null || \
+    ip6tables -t nat -A POSTROUTING -s "$dst_ip" -j SNAT --to-source "$src_ip"
+    
+    # 保存规则
+    mkdir -p /etc/iptables
+    ip6tables-save > /etc/iptables/rules.v6
+    
+    # 创建规则脚本
+    create_rules_script "v6-v6" "$src_ip" "$dst_ip"
+}
+
 # 配置IPv6到IPv4的转发
 configure_ipv6_to_ipv4() {
     local src_ip=$1
@@ -146,6 +171,21 @@ iptables -t nat -C POSTROUTING -s $dst_ip -j SNAT --to-source $dst_ip || \
 iptables -t nat -A POSTROUTING -s $dst_ip -j SNAT --to-source $dst_ip
 
 iptables-save > /etc/iptables/rules.v4
+EOF
+            ;;
+        
+        "v6-v6")
+            cat <<EOF >$script_path
+#!/bin/bash
+modprobe nf_nat_ipv6
+
+ip6tables -t nat -C PREROUTING -p udp --dst $src_ip -j DNAT --to-destination $dst_ip || \
+ip6tables -t nat -A PREROUTING -p udp --dst $src_ip -j DNAT --to-destination $dst_ip
+
+ip6tables -t nat -C POSTROUTING -s $dst_ip -j SNAT --to-source $src_ip || \
+ip6tables -t nat -A POSTROUTING -s $dst_ip -j SNAT --to-source $src_ip
+
+ip6tables-save > /etc/iptables/rules.v6
 EOF
             ;;
             
@@ -257,6 +297,9 @@ elif [[ $src_version == "ipv6" && $dst_version == "ipv4" ]]; then
 elif [[ $src_version == "ipv4" && $dst_version == "ipv6" ]]; then
     configure_ipv4_to_ipv6 "$src_ip" "$dst_ip"
     create_systemd_service "v4-v6"
+elif [[ $src_version == "ipv6" && $dst_version == "ipv6" ]]; then
+    configure_ipv6_to_ipv6 "$src_ip" "$dst_ip"
+    create_systemd_service "v6-v6"
 else
     echo -e "${RED}错误：不支持的IP版本组合！${NC}"
     exit 1
